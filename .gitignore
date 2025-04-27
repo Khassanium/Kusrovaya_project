@@ -1,0 +1,5 @@
+venv/
+eco_map/map_app/static/regions_fire/
+eco_map/data/raw_data/
+eco_map/data/work_with_data/fire_stats_by_district.csv
+eco_map/data/regions_fire/

@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>  
+    <!-- Стили подключай внутри <head> -->  
+    <link rel="stylesheet" href="{% static 'map_app/styles.css' %}">  
+</head>
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2 id="modal-title"></h2>
+        <div class="chart-container">
+            
+            <canvas id="nature-fires"></canvas>
+        </div>
+        <!-- <div class="chart-container">
+            <canvas id="forest-fires"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="control-fires"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="uncontrol-fires"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="troph-fires"></canvas>
+        </div> -->
+    </div>
+</div>
+<body>
+    <object 
+        type="image/svg+xml" 
+        data="{% static 'map_app/russia.svg' %}"
+        id="svg-map"
+    ></object>
+
+<script src="{% static 'map_app/chart.umd.js' %}"></script>
+<script src="{% static 'map_app/map.js' %}"></script>
+</body>
+</html>
