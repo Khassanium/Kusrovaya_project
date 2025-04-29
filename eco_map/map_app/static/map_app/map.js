@@ -3,6 +3,33 @@ let monthNames = [
     "янв", "фев", "мар", "апр", "май", "июн",
     "июл", "авг", "сен", "окт", "ноя", "дек"
 ];
+
+let graphColors = {
+    'Природный пожар': {
+        borderColor: 'rgb(0, 102, 204)',
+        backgroundColor: 'rgba(0, 102, 204, 0.2)'
+    },
+    'Лесной пожар': {
+        borderColor: 'rgb(34, 139, 34)',
+        backgroundColor: 'rgba(34, 139, 34, 0.2)'
+    },
+    'Контролируемый пал': {
+        borderColor: 'rgb(255, 165, 0)',
+        backgroundColor: 'rgba(255, 165, 0, 0.2)'
+    },
+    'Неконтролируемый пал': {
+        borderColor: 'rgb(220, 20, 60)',
+        backgroundColor: 'rgba(220, 20, 60, 0.2)'
+    },
+    'Торфяной пожар': {
+        borderColor: 'rgb(139, 69, 19)',
+        backgroundColor: 'rgba(139, 69, 19, 0.2)'
+    }
+};
+
+
+let charts = []
+
 document.addEventListener("DOMContentLoaded", function() {
     const svgObject = document.getElementById('svg-map');
 
@@ -30,14 +57,27 @@ function showModal(regionFullName, regionId) {
     let filename = regionId + '.json';
     fetch(dataGeneralPath + filename)
     .then(response => response.json())
-    .then(data =>   {
+    .then(data =>   {        
         createGraph('nature-fires', data.fires['Природный пожар'], 'Природный пожар');
+        createGraph('forest-fires', data.fires['Лесной пожар'], 'Лесной пожар');
+        createGraph('control-fires', data.fires['Контролируемый пал'], 'Контролируемый пал');
+        createGraph('uncontrol-fires', data.fires['Неконтролируемый пал'], 'Неконтролируемый пал');
+        createGraph('troph-fires', data.fires['Торфяной пожар'], 'Торфяной пожар');
     });
 }
 
 function closeModal() {
+    destroyAllCharts();
     document.getElementById('modal').classList.remove('active');
 }
+
+function destroyAllCharts() {
+    for (let key in charts) {
+        charts[key].destroy();
+        charts[key] = null;
+    }
+}
+
 
 function groupByYearAndMonth(fire_dates) {
     let data = {};
@@ -67,23 +107,27 @@ function groupByYearAndMonth(fire_dates) {
 }
 
 function createGraph(fire_type_id, fire_dates, label) {
-    document.querySelector('.chart-container').innerHTML = `<canvas id="${fire_type_id}"></canvas>`;
-    let ctx = document.getElementById(fire_type_id).getContext('2d');
+    let canvas = document.getElementById(fire_type_id);
+    let ctx = canvas.getContext('2d');
+
     let groupedData = groupByYearAndMonth(fire_dates);
     let labels = Object.keys(groupedData);
     let data = Object.values(groupedData);
+
     labels.push('окт 2021');
     data.push(0);
 
-    new Chart(ctx, {
+    graphColors[label]
+
+    charts[fire_type_id] = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
                 label: label,
                 data: data,
-                borderColor: 'rgb(10, 36, 36)',  // Цвет линии
-                backgroundColor: 'rgba(204, 42, 42, 0.2)',  // Цвет заливки
+                borderColor: graphColors[label].borderColor,  // Цвет линии
+                backgroundColor: graphColors[label].backgroundColor,  // Цвет заливки
                 fill: true
             }]
         },
