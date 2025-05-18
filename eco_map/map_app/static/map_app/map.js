@@ -27,7 +27,7 @@ let graphColors = {
     }
 };
 
-
+let currentRegionId = 1
 let charts = []
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 function showModal(regionFullName, regionId) {
-    
+    currentRegionId = regionId;
     document.getElementById('modal-title').textContent = `${regionFullName}`;
     document.getElementById('modal').classList.add('active');
     
@@ -77,6 +77,12 @@ function destroyAllCharts() {
         charts[key] = null;
     }
 }
+
+document.getElementById('ml-analysis-btn').addEventListener('click', function() {
+    if(currentRegionId) {
+        window.location.href = `/ml-analysis/?region_id=${currentRegionId}`;
+    }
+});
 
 
 function groupByYearAndMonth(fire_dates) {
@@ -159,3 +165,7 @@ function createGraph(fire_type_id, fire_dates, label) {
         }
     });
 }
+window.createGraph = createGraph;
+window.groupByYearAndMonth = groupByYearAndMonth;
+window.monthNames = monthNames;
+window.graphColors = graphColors;

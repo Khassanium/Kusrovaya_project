@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ML Анализ</title>
+    <link rel="stylesheet" href="{% static 'map_app/styles.css' %}">
+</head>
+<body>
+        <div class="ml-container">
+            <h1 id="ml-title">Прогноз пожаров для {{ region_name }}</h1>
+            <div class="ml-charts">
+    <div class="chart-container">
+        <canvas id="nature-fires"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="forest-fires"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="control-fires"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="uncontrol-fires"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="troph-fires"></canvas>
+    </div>
+    </div>
+    <div class="ml-plots">
+        {% for fire in fire_types %}
+            {% with fire|urlencode as safe_fire %}
+            <div class="plot-section">
+                <h3>{{ fire }}</h3>
+                <img src="{% static 'regions_fire/' %}{{ region_id }}_no_anomaly_{{ safe_fire }}.png" onerror="this.style.display='none'" alt="Нет графика без аномалии">
+                <img src="{% static 'regions_fire/params_' %}{{ region_id }}_no_anomaly_{{ safe_fire }}.png" onerror="this.style.display='none'" alt="Нет параметров без аномалии">
+
+                <img src="{% static 'regions_fire/' %}{{ region_id }}_anomaly_{{ safe_fire }}.png" onerror="this.style.display='none'" alt="Нет графика с аномалией">
+                <img src="{% static 'regions_fire/params_' %}{{ region_id }}_anomaly_{{ safe_fire }}.png" onerror="this.style.display='none'" alt="Нет параметров с аномалией">
+            </div>
+            {% endwith %}
+        {% endfor %}
+    </div>
+        
+        <button onclick="window.history.back()" class="back-button">Назад к карте</button>
+    </div>
+
+    <script src="{% static 'map_app/chart.umd.js' %}"></script>
+    <script src="{% static 'map_app/map.js' %}"></script>
+    <script src="{% static 'map_app/ml_analysis.js' %}"></script>
+
+
+
+</body>
+</html>

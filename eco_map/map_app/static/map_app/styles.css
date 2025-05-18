@@ -22,13 +22,13 @@ path:hover {
     border-radius: 10px;
     width: 90vw;
     height: 90vh;
-    max-width: 90vw;  /* ограничение по ширине */
-    max-height: 90vh;  /* не выходить за экран */
-    overflow: auto;    /* прокрутка, если контент выходит */
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
 }
 .close {
     position: absolute;
-    top: 20px; /* Отступ сверху */
+    top: 20px;
     right: 60px;
     cursor: pointer;
     float: right;
@@ -36,6 +36,80 @@ path:hover {
 }
 
 .chart-container {
-    width: 120vw;  /* 80% от ширины экрана */
-    height: 60vh; /* 40% от высоты экрана */
+    width: 100vw;
+    height: 60vh;
+}
+
+.ml-container {
+    padding: 20px;
+    max-width: 90vw;
+    margin: 0 auto; 
+    background-color: #f6f6f6;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.ml-title {
+    color: #333;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.ml-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ml-chart-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.back-button {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.back-button:hover {
+    background: #45a049;
+}
+
+.ml-button {
+    display: block;
+    margin: 0 auto 20px;
+    padding: 10px 20px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.ml-button:hover {
+    background: #0b7dda;
+}
+
+.chart-pair {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-pair img {
+  max-width: 100%;
+  height: auto;
 }
