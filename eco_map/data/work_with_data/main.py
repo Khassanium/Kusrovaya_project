@@ -54,7 +54,7 @@ region_to_code = {
     'Magadan': 'RU-MAG',
     'Mariy-El': 'RU-ME',
     'Mordovia': 'RU-MO',
-    'Moscow City': 'RU-MOW',  # Сам город Москва
+    'Moscow City': 'RU-MOW',  # город Москва
     'Moskva': 'RU-MOS',  # Московская область
     'Murmansk': 'RU-MUR',
     'Nenets': 'RU-NEN',
@@ -99,6 +99,7 @@ region_to_code = {
 
 
 regions_gdf = gpd.read_file(gpkg_path, layer=regions_layer).to_crs("EPSG:4326")
+print(regions_gdf['NAME_1'].unique())
 regions_gdf = regions_gdf[['NAME_1', 'geometry']]
 regions_sindex = regions_gdf.sindex
 
@@ -117,50 +118,46 @@ def find_region(lon: float, lat: float) -> str:
     except:
         return None
 
-chunksize = 50_000
-fire_types = ['Природный пожар', 'Лесной пожар', 'Контролируемый пал', 'Неконтролируемый пал', 'Торфяной пожар']
-# Обработка каждого чанка
-cnt = 1
-with pd.read_csv(fire_path, sep=';', chunksize=chunksize) as reader:
-    for chunk in reader:
-        print(f"Чанк #{cnt}")
-        cnt += 1
-        valid_chunk = chunk.dropna(subset=['lon', 'lat'])
+# chunksize = 50000
+# fire_types = ['Природный пожар', 'Лесной пожар', 'Контролируемый пал', 'Неконтролируемый пал', 'Торфяной пожар']
+# cnt = 1
+# with pd.read_csv(fire_path, sep=';', chunksize=chunksize) as reader:
+#     for chunk in reader:
+#         cnt += 1
+#         valid_chunk = chunk.dropna(subset=['lon', 'lat'])
 
-        region_buffer = {}  # Временное хранилище данных по регионам
+#         region_buffer = {}
 
-        for _, row in valid_chunk.iterrows():
-            region_name = find_region(row['lon'], row['lat'])
-            fire_type = str(row['type_name']).strip()
-            fire_date = row['dt']
+#         for x, row in valid_chunk.iterrows():
+#             region_name = find_region(row['lon'], row['lat'])
+#             fire_type = str(row['type_name']).strip()
+#             fire_date = row['dt']
 
-            if region_name and fire_type in fire_types:
-                region_code = region_to_code.get(region_name)
-                if region_code:
-                    # Инициализация буфера
-                    if region_code not in region_buffer:
-                        region_buffer[region_code] = {"fire_stats": {"total": 0, **{t: 0 for t in fire_types}}, "fires": {t: [] for t in fire_types}}
+#             if region_name and fire_type in fire_types:
+#                 region_code = region_to_code.get(region_name)
+#                 if region_code:
+#                     if region_code not in region_buffer:
+#                         region_buffer[region_code] = {"fire_stats": {"total": 0, **{t: 0 for t in fire_types}}, "fires": {t: [] for t in fire_types}}
 
-                    region_buffer[region_code]["fire_stats"]["total"] += 1
-                    region_buffer[region_code]["fire_stats"][fire_type] += 1
-                    region_buffer[region_code]["fires"][fire_type].append(fire_date)
+#                     region_buffer[region_code]["fire_stats"]["total"] += 1
+#                     region_buffer[region_code]["fire_stats"][fire_type] += 1
+#                     region_buffer[region_code]["fires"][fire_type].append(fire_date)
 
-        # После обработки чанка — записываем всё в файлы
-        for region_code, buffer_data in region_buffer.items():
-            region_file_path = os.path.join(output_path, f"{region_code}.json")
+#         for region_code, buffer_data in region_buffer.items():
+#             region_file_path = os.path.join(output_path, f"{region_code}.json")
 
-            if os.path.exists(region_file_path):
-                with open(region_file_path, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-            else:
-                existing_data = {"fire_stats": {"total": 0, **{t: 0 for t in fire_types}}, "fires": {t: [] for t in fire_types}}
+#             if os.path.exists(region_file_path):
+#                 with open(region_file_path, 'r', encoding='utf-8') as f:
+#                     existing_data = json.load(f)
+#             else:
+#                 existing_data = {"fire_stats": {"total": 0, **{t: 0 for t in fire_types}}, "fires": {t: [] for t in fire_types}}
 
-            # Объединяем
-            for fire_type in fire_types:
-                existing_data["fire_stats"][fire_type] += buffer_data["fire_stats"][fire_type]
-                existing_data["fires"][fire_type].extend(buffer_data["fires"][fire_type])
-            existing_data["fire_stats"]["total"] += buffer_data["fire_stats"]["total"]
+#             # Объединяем
+#             for fire_type in fire_types:
+#                 existing_data["fire_stats"][fire_type] += buffer_data["fire_stats"][fire_type]
+#                 existing_data["fires"][fire_type].extend(buffer_data["fires"][fire_type])
+#             existing_data["fire_stats"]["total"] += buffer_data["fire_stats"]["total"]
 
-            with open(region_file_path, 'w', encoding='utf-8') as f:
-                json.dump(existing_data, f, ensure_ascii=False, indent=4)
+#             with open(region_file_path, 'w', encoding='utf-8') as f:
+#                 json.dump(existing_data, f, ensure_ascii=False, indent=4)
                     
