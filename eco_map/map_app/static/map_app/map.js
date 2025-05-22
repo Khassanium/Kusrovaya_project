@@ -132,28 +132,26 @@ function createGraph(fire_type_id, fire_dates, label) {
             datasets: [{
                 label: label,
                 data: data,
-                borderColor: graphColors[label].borderColor,  // Цвет линии
-                backgroundColor: graphColors[label].backgroundColor,  // Цвет заливки
+                borderColor: graphColors[label].borderColor,
+                backgroundColor: graphColors[label].backgroundColor,
                 fill: true
             }]
         },
         options: {
-            maintainAspectRatio: false,  // Отключаем сохранение пропорций
+            maintainAspectRatio: false,
             responsive: true,
             scales: {
                 x: {
                     ticks: {
-                        autoSkip: false,  // Отключаем автоматическое пропускание
-                        maxRotation: 50,  // Поворот меток
+                        autoSkip: false,
+                        maxRotation: 50,
                         minRotation: 0,
                         font: {
                             size: 10
                         },
-                        padding: 0 // Увеличиваем расстояние между метками оси X
-
+                        padding: 0
                     },
-                    // Оставляем немного пространства справа
-                    suggestedMax: labels.length + 1  // Увеличиваем максимальный индекс оси X
+                    suggestedMax: labels.length + 1
                 },
                 y: {
                     beginAtZero: true,

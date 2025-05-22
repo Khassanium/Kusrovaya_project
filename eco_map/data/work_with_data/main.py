@@ -102,12 +102,10 @@ regions_gdf = gpd.read_file(gpkg_path, layer=regions_layer).to_crs("EPSG:4326")
 print(regions_gdf['NAME_1'].unique())
 regions_gdf = regions_gdf[['NAME_1', 'geometry']]
 regions_sindex = regions_gdf.sindex
-
 region_names = regions_gdf['NAME_1'].unique().tolist()
 
 
 def find_region(lon: float, lat: float) -> str:
-    """Возвращает название района или None"""
     try:
         point = Point(lon, lat)
         possible_matches = list(regions_sindex.intersection(point.bounds))
@@ -152,7 +150,6 @@ def find_region(lon: float, lat: float) -> str:
 #             else:
 #                 existing_data = {"fire_stats": {"total": 0, **{t: 0 for t in fire_types}}, "fires": {t: [] for t in fire_types}}
 
-#             # Объединяем
 #             for fire_type in fire_types:
 #                 existing_data["fire_stats"][fire_type] += buffer_data["fire_stats"][fire_type]
 #                 existing_data["fires"][fire_type].extend(buffer_data["fires"][fire_type])

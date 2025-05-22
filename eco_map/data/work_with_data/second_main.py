@@ -20,17 +20,6 @@ MODELS_DIR.mkdir(exist_ok=True)
 PLOTS_DIR.mkdir(exist_ok=True)
 
 def train_for_region(region_id, num_samples=8, transform_log=False):
-    """
-    Обучение Prophet для региона с Random Search:
-      - use_anomaly: True/False
-      - transform_log: False/True (лог-трансформация y)
-
-    По каждой из двух конфигураций (аноми/нет) берём случайно num_samples
-    комбинаций гиперпараметров из полного grid и выбираем лучшую по MAE.
-    Сохраняем два файла:
-      {region_id}_anomaly.pkl
-      {region_id}_no_anomaly.pkl
-    """
     data_path = DATA_DIR / f'{region_id}.json'
     try:
         with open(data_path, 'r', encoding='utf-8') as f:
@@ -41,7 +30,6 @@ def train_for_region(region_id, num_samples=8, transform_log=False):
 
     full_range = pd.date_range('2012-03-01', '2021-09-30', freq='ME')
 
-    # полный grid гиперпараметров
     param_grid = {
         'changepoint_prior_scale': [0.01, 0.1, 0.5, 2.0],
         'seasonality_prior_scale': [5.0, 15.0, 25.0],
@@ -57,30 +45,24 @@ def train_for_region(region_id, num_samples=8, transform_log=False):
         suffix = f"{region_id}_{'anomaly' if use_anomaly else 'no_anomaly'}"
         models, metrics = {}, {}
 
-        # случайная подвыборка гиперпараметров
         sampled = random.sample(all_params, k=min(num_samples, len(all_params)))
 
         for fire_type, dates in data['fires'].items():
-            # пропускаем редкие типы, если меньше 80 пожаров за весь период
             if data['fire_stats'].get(fire_type, 0) < 80:
                 continue
 
-            # строим DataFrame по месяцам
             df = pd.DataFrame({'ds': pd.to_datetime(dates), 'y': 1})
             df = (
                 df.groupby(pd.Grouper(key='ds', freq='ME')).sum()
                   .reindex(full_range, fill_value=0)
                   .reset_index().rename(columns={'index':'ds'})
             )
-            # если нет ни одного пожара — пропускаем
             if df['y'].sum() == 0:
                 continue
 
-            # лог-трансформация по флагу
             if transform_log:
                 df['y'] = np.log1p(df['y'])
 
-            # регрессор аномалии при необходимости
             if use_anomaly:
                 df['anomaly'] = df['ds'].apply(
                     lambda x: 1 if pd.Timestamp('2020-01-01') <= x <= pd.Timestamp('2021-09-30')
@@ -89,27 +71,24 @@ def train_for_region(region_id, num_samples=8, transform_log=False):
 
             best_mae, best_model, best_params = float('inf'), None, None
 
-            # Random Search по sampled
             for params in sampled:
                 try:
                     m = Prophet(
-                        yearly_seasonality=False,         # отключили встроенную сезонность
+                        yearly_seasonality=False,
                         weekly_seasonality=False,
-                        n_changepoints=6,                 # ограничиваем число точек перегиба
-                        changepoint_prior_scale=params['changepoint_prior_scale'],  # 0.01–2.0
+                        n_changepoints=6,                
+                        changepoint_prior_scale=params['changepoint_prior_scale'], 
                         seasonality_mode=params['seasonality_mode'],
                         interval_width=params['interval_width']
                     )
-                    # добавляем свою годовую сезонность с меньшим числом гармоник
                     m.add_seasonality(
                         name='yearly',
                         period=365.25,
-                        fourier_order=4,                  # сниженная гибкость
+                        fourier_order=4,
                         prior_scale=params['seasonality_prior_scale']
                     )
                     if use_anomaly:
                         m.add_regressor('anomaly', prior_scale=1.0, mode='additive')
-                    # ========================================
 
                     m.fit(df)
                     df_cv = cross_validation(
@@ -131,7 +110,6 @@ def train_for_region(region_id, num_samples=8, transform_log=False):
                 metrics[fire_type] = {'mae': best_mae, 'params': best_params}
                 print(f"{suffix}: {fire_type} → MAE={best_mae:.5f}, params={best_params}")
 
-        # сохраняем лучшие модели для этой конфигурации
         if models:
             joblib.dump({'models': models, 'metrics': metrics},
                         MODELS_DIR / f"{suffix}.pkl")
@@ -140,12 +118,6 @@ def train_for_region(region_id, num_samples=8, transform_log=False):
 
 
 def show_metrics(suffix, transform_log):
-    """
-    Визуализация результатов для сохранённых моделей.
-
-    suffix: строка вида "<region>_anomaly" или "<region>_no_anomaly"
-    transform_log: нужно ли делать обратное преобразование expm1()
-    """
     pkl_path = MODELS_DIR / f"{suffix}.pkl"
     if not pkl_path.exists():
         print(f"Файл {pkl_path} не найден")
@@ -161,49 +133,52 @@ def show_metrics(suffix, transform_log):
 
     for fire_type, model in models.items():
         info = metrics.get(fire_type, {})
-        param_info = info.get('params', {})
-        mae = info.get('holdout_mae', info.get('mae', None))
-
-        if "no_anomaly" not in suffix:
-            anomaly_coef = model.extra_regressors['anomaly']['prior_scale']
-        else:
-            anomaly_coef = None
-        cols = {
-            'Масштаб перегиба':      param_info.get('changepoint_prior_scale'),
-            'Масштаб сезонности':    param_info.get('seasonality_prior_scale'),
-            'Режим сезонности':      mode_map.get(param_info.get('seasonality_mode'), ''),
-            'Доверительный интервал':      param_info.get('interval_width'),
-            'MAE':  round(mae, 5)
-        }
-        if anomaly_coef is not None:
-            cols['Коэффициент аномалии'] = anomaly_coef
-        df_params = pd.DataFrame([cols], index=[fire_type])
-        n_cols = len(df_params.columns)
-        fig_t, ax_t = plt.subplots(figsize=(1.5 * n_cols, 1 + 0.4))
-        ax_t.axis('off')
-        tbl = ax_t.table(
-            cellText=df_params.values,
-            colLabels=df_params.columns,
-            rowLabels=df_params.index,
-            loc='center',
-            cellLoc='center'
-        )
-        tbl.auto_set_font_size(False)
-        tbl.set_fontsize(8)
-        tbl.scale(1, 1.5)
-        try:
-            tbl.auto_set_column_width(col=list(range(n_cols)))
-        except Exception:
-            pass
-        fig_t.tight_layout()
-        table_path = PLOTS_DIR / f"params_{suffix}_{fire_type}.png"
-        fig_t.savefig(table_path, bbox_inches='tight')
-        plt.close(fig_t)
+        # param_info = info.get('params', {})
+        # mae = info.get('holdout_mae', info.get('mae', None))
+        # if "no_anomaly" not in suffix:
+        #     anomaly_coef = model.extra_regressors['anomaly']['prior_scale']
+        # else:
+        #     anomaly_coef = None
+        # cols = {
+        #     'Масштаб перегиба': param_info.get('changepoint_prior_scale'),
+        #     'Масштаб сезонности': param_info.get('seasonality_prior_scale'),
+        #     'Режим сезонности': mode_map.get(param_info.get('seasonality_mode'), ''),
+        #     'Доверительный интервал': param_info.get('interval_width'),
+        #     'MAE': round(mae, 5)
+        # }
+        # if anomaly_coef is not None:
+        #     cols['Коэффициент аномалии'] = anomaly_coef
+        # df_params = pd.DataFrame([cols], index=[fire_type])
+        # n_cols = len(df_params.columns)
+        # fig_t, ax_t = plt.subplots(figsize=(1.5 * n_cols, 1 + 0.4))
+        # ax_t.axis('off')
+        # tbl = ax_t.table(
+        #     cellText=df_params.values,
+        #     colLabels=df_params.columns,
+        #     rowLabels=df_params.index,
+        #     loc='center',
+        #     cellLoc='center'
+        # )
+        # tbl.auto_set_font_size(False)
+        # tbl.set_fontsize(8)
+        # tbl.scale(1, 1.5)
+        # try:
+        #     tbl.auto_set_column_width(col=list(range(n_cols)))
+        # except Exception:
+        #     pass
+        # fig_t.tight_layout()
+        # table_path = PLOTS_DIR / f"params_{suffix}_{fire_type}.png"
+        # fig_t.savefig(table_path, bbox_inches='tight')
+        # plt.close(fig_t)
 
         history = model.history.copy()
         if transform_log:
             history['y'] = np.expm1(history['y'])
-        future = model.make_future_dataframe(periods=12, freq='ME')
+        last_date = model.history['ds'].max()
+        end_date = pd.Timestamp('2024-12-31')
+        n_months = (end_date.year - last_date.year) * 12 + (end_date.month - last_date.month)
+
+        future = model.make_future_dataframe(periods=n_months, freq='ME')
         if hasattr(model, 'extra_regressors') and 'anomaly' in model.extra_regressors:
             future['anomaly'] = future['ds'].between(
                 pd.Timestamp('2020-01-01'), pd.Timestamp('2021-09-30')
@@ -293,7 +268,7 @@ if __name__ == '__main__':
     'Magadan': 'RU-MAG',
     'Mariy-El': 'RU-ME',
     'Mordovia': 'RU-MO',
-    'Moscow City': 'RU-MOW',  # Сам город Москва
+    'Moscow City': 'RU-MOW',  # город Москва
     'Moskva': 'RU-MOS',  # Московская область
     'Murmansk': 'RU-MUR',
     'Nenets': 'RU-NEN',
